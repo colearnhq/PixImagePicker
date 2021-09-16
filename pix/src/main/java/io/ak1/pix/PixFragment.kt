@@ -90,6 +90,9 @@ class PixFragment(private val resultCallback: ((PixEventCallback.Results) -> Uni
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         options = arguments?.getParcelable(ARG_PARAM_PIX) ?: Options()
+
+        //Defining controls
+
         requireActivity().let {
             it.setupScreen()
             it.actionBar?.hide()
@@ -111,7 +114,54 @@ class PixFragment(private val resultCallback: ((PixEventCallback.Results) -> Uni
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         requireActivity().setup()
+
     }
+
+    private fun setupCameraView() {
+        binding.gridLayout.controlsLayout.controlsLayout.visibility =
+            if (options.showControls) {
+                View.VISIBLE
+            } else {
+                View.GONE
+            }
+
+        binding.gridLayout.bottomSheet.visibility =
+            if (options.showDefaultGallery) {
+                View.VISIBLE
+            } else {
+                View.GONE
+            }
+
+        showGallery()
+    }
+
+    fun showGallery() {
+        binding.gridLayout.bottomSheet.visibility = View.VISIBLE
+        if (!options.showDefaultGallery) {
+            binding.gridLayout.initialRecyclerviewContainer.visibility = View.GONE
+        }
+
+        if (mBottomSheetBehavior != null) {
+            Log.d("Camera", "Bottom Sheet is NOT null")
+            mBottomSheetBehavior?.state = BottomSheetBehavior.STATE_EXPANDED
+            binding.gridLayout.initialRecyclerviewContainer.visibility = View.VISIBLE
+
+
+        } else {
+            Log.d("Camera", "Bottom Sheet is NULL")
+        }
+    }
+
+    fun hideGallery() {
+        binding.gridLayout.bottomSheet.visibility = View.GONE
+    }
+
+    fun clickPicture() {
+
+    }
+
+    fun switchFlashMode() {}
+
 
     private fun FragmentActivity.setup() {
         setUpMargins(binding)
@@ -162,6 +212,9 @@ class PixFragment(private val resultCallback: ((PixEventCallback.Results) -> Uni
         setBottomSheetBehavior()
         setupControls()
         backPressController()
+
+        setupCameraView()
+
 
     }
 

@@ -30,6 +30,8 @@ data class Img(
 @SuppressLint("ParcelCreator")
 @Parcelize
 class Options : Parcelable {
+    var showControls = false
+    var showDefaultGallery = true
     var ratio = Ratio.RATIO_AUTO
     var count = 1
     var spanCount = 4

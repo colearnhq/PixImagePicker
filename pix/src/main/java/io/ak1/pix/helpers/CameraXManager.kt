@@ -97,6 +97,9 @@ class CameraXManager(
             .setTargetRotation(rotation)
             .build()
         useCases.add(preview!!)
+
+
+
         // ImageCapture
         when (options.mode) {
             Mode.Picture -> {
