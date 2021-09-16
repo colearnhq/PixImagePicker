@@ -1,6 +1,7 @@
 package io.ak1.pix
 
 import android.annotation.SuppressLint
+import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -10,6 +11,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.camera.core.ImageCapture
 import androidx.core.net.toFile
 import androidx.core.view.ViewCompat
 import androidx.core.view.isVisible
@@ -17,12 +19,14 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
 import androidx.fragment.app.setFragmentResultListener
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import io.ak1.pix.adapters.InstantImageAdapter
 import io.ak1.pix.adapters.MainImageAdapter
 import io.ak1.pix.databinding.FragmentPixBinding
 import io.ak1.pix.helpers.*
 import io.ak1.pix.interfaces.OnSelectionListener
+import io.ak1.pix.models.Flash
 import io.ak1.pix.models.Img
 import io.ak1.pix.models.Options
 import io.ak1.pix.models.PixViewModel
@@ -39,7 +43,7 @@ import kotlin.coroutines.cancellation.CancellationException
  */
 
 class PixFragment(private val resultCallback: ((PixEventCallback.Results) -> Unit)? = null) :
-    Fragment(), View.OnTouchListener {
+    Fragment(), View.OnTouchListener, CameraController {
 
     private val model: PixViewModel by viewModels()
     private var _binding: FragmentPixBinding? = null
@@ -100,7 +104,6 @@ class PixFragment(private val resultCallback: ((PixEventCallback.Results) -> Uni
         }
     }
 
-
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?,
@@ -109,59 +112,12 @@ class PixFragment(private val resultCallback: ((PixEventCallback.Results) -> Uni
         binding.root
     }
 
-
     @InternalCoroutinesApi
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         requireActivity().setup()
 
     }
-
-    private fun setupCameraView() {
-        binding.gridLayout.controlsLayout.controlsLayout.visibility =
-            if (options.showControls) {
-                View.VISIBLE
-            } else {
-                View.GONE
-            }
-
-        binding.gridLayout.bottomSheet.visibility =
-            if (options.showDefaultGallery) {
-                View.VISIBLE
-            } else {
-                View.GONE
-            }
-
-        showGallery()
-    }
-
-    fun showGallery() {
-        binding.gridLayout.bottomSheet.visibility = View.VISIBLE
-        if (!options.showDefaultGallery) {
-            binding.gridLayout.initialRecyclerviewContainer.visibility = View.GONE
-        }
-
-        if (mBottomSheetBehavior != null) {
-            Log.d("Camera", "Bottom Sheet is NOT null")
-            mBottomSheetBehavior?.state = BottomSheetBehavior.STATE_EXPANDED
-            binding.gridLayout.initialRecyclerviewContainer.visibility = View.VISIBLE
-
-
-        } else {
-            Log.d("Camera", "Bottom Sheet is NULL")
-        }
-    }
-
-    fun hideGallery() {
-        binding.gridLayout.bottomSheet.visibility = View.GONE
-    }
-
-    fun clickPicture() {
-
-    }
-
-    fun switchFlashMode() {}
-
 
     private fun FragmentActivity.setup() {
         setUpMargins(binding)
@@ -198,7 +154,6 @@ class PixFragment(private val resultCallback: ((PixEventCallback.Results) -> Uni
         }
     }
 
-
     private fun initialise(context: FragmentActivity) {
         binding.permissionsLayout.permissionsLayout.hide()
         binding.gridLayout.gridLayout.show()
@@ -212,9 +167,17 @@ class PixFragment(private val resultCallback: ((PixEventCallback.Results) -> Uni
         setBottomSheetBehavior()
         setupControls()
         backPressController()
-
         setupCameraView()
-
+        lifecycleScope.launch {
+            delay(1000)
+            switchFlashMode()
+            delay(1000)
+            switchFlashMode()
+            delay(1000)
+            switchFlashMode()
+            delay(1000)
+            switchFlashMode()
+        }
 
     }
 
@@ -279,7 +242,6 @@ class PixFragment(private val resultCallback: ((PixEventCallback.Results) -> Uni
             fastscrollHandle.setOnTouchListener(this@PixFragment)
         }
     }
-
 
     private fun backPressController() {
         CoroutineScope(Dispatchers.Main).launch {
@@ -393,34 +355,42 @@ class PixFragment(private val resultCallback: ((PixEventCallback.Results) -> Uni
             addOnSelectionListener(onSelectionListener)
             setHasStableIds(true)
         }
-
         binding.gridLayout.apply {
-            instantRecyclerView.adapter = instantImageAdapter
-            instantRecyclerView.addOnItemTouchListener(CustomItemTouchListener(binding))
-            recyclerView.setupMainRecyclerView(
-                context, mainImageAdapter, scrollListener(this@PixFragment, binding)
-            )
-        }
-    }
-
-
-    private fun setBottomSheetBehavior() {
-        mBottomSheetBehavior = BottomSheetBehavior.from(binding.gridLayout.bottomSheet)
-        requireActivity().setup(binding, mBottomSheetBehavior) {
-            if (it) {
-                showScrollbar(binding.gridLayout.fastscrollScrollbar, requireContext())
-                mainImageAdapter.notifyDataSetChanged()
-                mViewHeight = binding.gridLayout.fastscrollScrollbar.measuredHeight.toFloat()
-                handler.post { binding.setViewPositions(getScrollProportion(binding.gridLayout.recyclerView)) }
-                binding.gridLayout.sendButtonStateAnimation(show = false, withAnim = false)
+            if (options.showDefaultControls) {
+                instantRecyclerView.adapter = instantImageAdapter
+                instantRecyclerView.addOnItemTouchListener(CustomItemTouchListener(binding))
+                recyclerView.setupMainRecyclerView(
+                    context, mainImageAdapter, scrollListener(this@PixFragment, binding)
+                )
             } else {
-                instantImageAdapter.notifyDataSetChanged()
-                binding.gridLayout.fastscrollScrollbar.hide()
-                binding.gridLayout.sendButtonStateAnimation(model.longSelectionValue)
+                binding.gridLayout.rvImages.setupMainRecyclerView(
+                    context, mainImageAdapter, scrollListener(this@PixFragment, binding)
+                )
             }
         }
     }
 
+    private fun setBottomSheetBehavior() {
+        if (options.showDefaultControls) {
+            mBottomSheetBehavior = BottomSheetBehavior.from(binding.gridLayout.bottomSheet)
+            requireActivity().setup(binding, mBottomSheetBehavior) {
+                if (it) {
+                    showScrollbar(binding.gridLayout.fastscrollScrollbar, requireContext())
+                    mainImageAdapter.notifyDataSetChanged()
+                    mViewHeight = binding.gridLayout.fastscrollScrollbar.measuredHeight.toFloat()
+                    handler.post { binding.setViewPositions(getScrollProportion(binding.gridLayout.recyclerView)) }
+                    binding.gridLayout.sendButtonStateAnimation(show = false, withAnim = false)
+                } else {
+                    instantImageAdapter.notifyDataSetChanged()
+                    binding.gridLayout.fastscrollScrollbar.hide()
+                    binding.gridLayout.sendButtonStateAnimation(model.longSelectionValue)
+                }
+            }
+        } else {
+            mBottomSheetBehavior = BottomSheetBehavior.from(binding.gridLayout.clGallery)
+        }
+
+    }
 
     private fun CameraXManager.startCamera() {
         setUpCamera(binding)
@@ -478,4 +448,73 @@ class PixFragment(private val resultCallback: ((PixEventCallback.Results) -> Uni
         }
         return false
     }
+
+    private fun setupCameraView() {
+        binding.gridLayout.controlsLayout.controlsLayout.visibility =
+            if (options.showDefaultControls) {
+                View.VISIBLE
+            } else {
+                View.GONE
+            }
+
+        if (options.showDefaultControls) {
+            binding.gridLayout.bottomSheet.visibility = View.VISIBLE
+            binding.gridLayout.clGallery.visibility = View.GONE
+        } else {
+            binding.gridLayout.bottomSheet.visibility = View.GONE
+        }
+    }
+
+    override fun showGallery() {
+        binding.gridLayout.clGallery.visibility = View.VISIBLE
+        binding.gridLayout.ivCloseGallery.setOnClickListener {
+            hideGallery()
+        }
+        mBottomSheetBehavior?.state = BottomSheetBehavior.STATE_EXPANDED
+        mainImageAdapter.notifyDataSetChanged()
+        // swipe animation is pending
+    }
+
+    override fun hideGallery() {
+        mBottomSheetBehavior?.state = BottomSheetBehavior.STATE_COLLAPSED
+        binding.gridLayout.clGallery.visibility = View.GONE
+    }
+
+    override fun clickPicture() {
+        cameraXManager?.takePhoto { uri, exc ->
+            if (exc == null) {
+                model.selectionList.value?.add(Img(contentUrl = uri))
+                model.returnObjects()
+                val newUri = Uri.parse(uri.toString())
+                Log.i("Camera_uri", "$newUri")
+            } else {
+                Log.i("Camera_exception", "$exc")
+            }
+        }
+    }
+
+    override fun switchFlashMode(): Int {
+        val flashMode = when (options.flash) {
+            Flash.Auto -> {
+                Log.i("Switching_flash", "Switching to off")
+                options.flash = Flash.Off
+                ImageCapture.FLASH_MODE_OFF
+            }
+            Flash.Off -> {
+                Log.i("Switching_flash", "Switching to On")
+                options.flash = Flash.On
+                ImageCapture.FLASH_MODE_ON
+            }
+            else -> {
+                // for on also
+                Log.i("Switching_flash", "Switching to auto")
+                options.flash = Flash.Auto
+                ImageCapture.FLASH_MODE_AUTO
+            }
+        }
+        cameraXManager?.imageCapture?.flashMode = flashMode
+        return flashMode
+    }
+
 }
+
