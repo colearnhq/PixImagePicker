@@ -50,10 +50,6 @@ class FragmentSample : AppCompatActivity() {
                 PixEventCallback.Status.ERROR -> {
                     Log.e("PixEventCallback", "Error : ${it}")
                 }
-
-                PixEventCallback.Status.BACK_PRESSED -> {
-                    supportFragmentManager.popBackStack()
-                }
             }
 
         }
@@ -63,14 +59,6 @@ class FragmentSample : AppCompatActivity() {
         showStatusBar()
         supportFragmentManager.beginTransaction()
             .replace(R.id.container, resultsFragment).commit()
-    }
-
-    override fun onBackPressed() {
-        val f = supportFragmentManager.findFragmentById(R.id.container)
-        if (f is ResultsFragment)
-            super.onBackPressed()
-        else
-            PixBus.onBackPressedEvent()
     }
 
 }

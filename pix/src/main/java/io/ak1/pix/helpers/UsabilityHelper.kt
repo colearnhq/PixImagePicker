@@ -26,7 +26,7 @@ import kotlinx.coroutines.launch
 open class PixEventCallback {
 
     enum class Status {
-        SUCCESS, BACK_PRESSED, ERROR
+        SUCCESS, ERROR
     }
 
     data class Results(
@@ -37,12 +37,13 @@ open class PixEventCallback {
     private val backPressedEvents = MutableSharedFlow<Any>()
     private val outputEvents = MutableSharedFlow<Results>()
 
-    fun onBackPressedEvent() {
-        CoroutineScope(Dispatchers.IO).launch {
-            backPressedEvents.emit(Any())
-        }
+    // unnecessary code block
+    /*  fun onBackPressedEvent() {
+          CoroutineScope(Dispatchers.IO).launch {
+              backPressedEvents.emit(Any())
+          }
 
-    }
+      }*/
 
 
     suspend fun on(

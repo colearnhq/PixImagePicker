@@ -166,7 +166,6 @@ class PixFragment(private val resultCallback: ((PixEventCallback.Results) -> Uni
         retrieveMedia()
         setBottomSheetBehavior()
         setupControls()
-        backPressController()
         setupCameraView()
     }
 
@@ -246,29 +245,31 @@ class PixFragment(private val resultCallback: ((PixEventCallback.Results) -> Uni
         }
     }
 
-    private fun backPressController() {
-        CoroutineScope(Dispatchers.Main).launch {
-            PixBus.on(this) {
-                val list = model.selectionList.value ?: HashSet()
-                when {
-                    list.size > 0 -> {
-                        for (img in list) {
-                            //  options.preSelectedUrls = ArrayList()
-                            instantImageAdapter.select(false, img.position)
-                            mainImageAdapter.select(false, img.position)
-                        }
-                        model.selectionList.postValue(HashSet())
-                    }
-                    mBottomSheetBehavior?.state == BottomSheetBehavior.STATE_EXPANDED -> {
-                        mBottomSheetBehavior?.setState(BottomSheetBehavior.STATE_COLLAPSED)
-                    }
-                    else -> {
-                        model.returnObjects()
-                    }
-                }
-            }
-        }
-    }
+
+    // backPressController() is unnecessary code which is conflicting with our error state
+    /* private fun backPressController() {
+         CoroutineScope(Dispatchers.Main).launch {
+             PixBus.on(this) {
+                 val list = model.selectionList.value ?: HashSet()
+                 when {
+                     list.size > 0 -> {
+                         for (img in list) {
+                             //  options.preSelectedUrls = ArrayList()
+                             instantImageAdapter.select(false, img.position)
+                             mainImageAdapter.select(false, img.position)
+                         }
+                         model.selectionList.postValue(HashSet())
+                     }
+                     mBottomSheetBehavior?.state == BottomSheetBehavior.STATE_EXPANDED -> {
+                         mBottomSheetBehavior?.setState(BottomSheetBehavior.STATE_COLLAPSED)
+                     }
+                     else -> {
+                         model.returnObjects()
+                     }
+                 }
+             }
+         }
+     }*/
 
     private fun setupControls() {
         binding.setupClickControls(model, cameraXManager, options) { int, uri ->
