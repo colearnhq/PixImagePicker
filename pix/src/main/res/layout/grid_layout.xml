@@ -10,6 +10,7 @@
 
         <View
             android:id="@+id/status_bar_bg"
+            android:visibility="gone"
             android:layout_width="match_parent"
             android:layout_height="@dimen/margin_top"
             android:background="@color/primary_color_pix"
@@ -144,6 +145,7 @@
 
                         <androidx.appcompat.widget.AppCompatImageView
                             android:id="@+id/arrow_up"
+                            android:visibility="gone"
                             android:layout_width="20dp"
                             android:layout_height="16dp"
                             android:layout_gravity="bottom|center_horizontal"
