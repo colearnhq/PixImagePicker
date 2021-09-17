@@ -1,6 +1,7 @@
 package io.ak1.pix
 
 import android.annotation.SuppressLint
+import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -10,6 +11,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.camera.core.ImageCapture
 import androidx.core.net.toFile
 import androidx.core.view.ViewCompat
 import androidx.core.view.isVisible
@@ -17,12 +19,14 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
 import androidx.fragment.app.setFragmentResultListener
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import io.ak1.pix.adapters.InstantImageAdapter
 import io.ak1.pix.adapters.MainImageAdapter
 import io.ak1.pix.databinding.FragmentPixBinding
 import io.ak1.pix.helpers.*
 import io.ak1.pix.interfaces.OnSelectionListener
+import io.ak1.pix.models.Flash
 import io.ak1.pix.models.Img
 import io.ak1.pix.models.Options
 import io.ak1.pix.models.PixViewModel
@@ -39,7 +43,7 @@ import kotlin.coroutines.cancellation.CancellationException
  */
 
 class PixFragment(private val resultCallback: ((PixEventCallback.Results) -> Unit)? = null) :
-    Fragment(), View.OnTouchListener {
+    Fragment(), View.OnTouchListener, CameraController {
 
     private val model: PixViewModel by viewModels()
     private var _binding: FragmentPixBinding? = null
@@ -97,7 +101,6 @@ class PixFragment(private val resultCallback: ((PixEventCallback.Results) -> Uni
         }
     }
 
-
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?,
@@ -106,11 +109,11 @@ class PixFragment(private val resultCallback: ((PixEventCallback.Results) -> Uni
         binding.root
     }
 
-
     @InternalCoroutinesApi
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         requireActivity().setup()
+
     }
 
     private fun FragmentActivity.setup() {
@@ -148,7 +151,6 @@ class PixFragment(private val resultCallback: ((PixEventCallback.Results) -> Uni
         }
     }
 
-
     private fun initialise(context: FragmentActivity) {
         binding.permissionsLayout.permissionsLayout.hide()
         binding.gridLayout.gridLayout.show()
@@ -161,8 +163,7 @@ class PixFragment(private val resultCallback: ((PixEventCallback.Results) -> Uni
         retrieveMedia()
         setBottomSheetBehavior()
         setupControls()
-        backPressController()
-
+        setupCameraView()
     }
 
     override fun onDestroyView() {
@@ -206,11 +207,25 @@ class PixFragment(private val resultCallback: ((PixEventCallback.Results) -> Uni
                 model.selectionList.postValue(HashSet())
                 options.preSelectedUrls.clear()
                 val results = set.map { it.contentUrl }
-                resultCallback?.invoke(PixEventCallback.Results(results))
+                if (results.isEmpty()) {
+                    resultCallback?.invoke(
+                        PixEventCallback.Results(
+                            results,
+                            PixEventCallback.Status.ERROR
+                        )
+                    )
+                } else {
+                    resultCallback?.invoke(PixEventCallback.Results(results))
+                }
+
                 PixBus.returnObjects(
                     event = PixEventCallback.Results(
                         results,
-                        PixEventCallback.Status.SUCCESS
+                        if (results.isEmpty()) {
+                            PixEventCallback.Status.ERROR
+                        } else {
+                            PixEventCallback.Status.SUCCESS
+                        }
                     )
                 )
             }
@@ -228,29 +243,30 @@ class PixFragment(private val resultCallback: ((PixEventCallback.Results) -> Uni
     }
 
 
-    private fun backPressController() {
-        CoroutineScope(Dispatchers.Main).launch {
-            PixBus.on(this) {
-                val list = model.selectionList.value ?: HashSet()
-                when {
-                    list.size > 0 -> {
-                        for (img in list) {
-                            //  options.preSelectedUrls = ArrayList()
-                            instantImageAdapter.select(false, img.position)
-                            mainImageAdapter.select(false, img.position)
-                        }
-                        model.selectionList.postValue(HashSet())
-                    }
-                    mBottomSheetBehavior?.state == BottomSheetBehavior.STATE_EXPANDED -> {
-                        mBottomSheetBehavior?.setState(BottomSheetBehavior.STATE_COLLAPSED)
-                    }
-                    else -> {
-                        model.returnObjects()
-                    }
-                }
-            }
-        }
-    }
+    // backPressController() is unnecessary code which is conflicting with our error state
+    /* private fun backPressController() {
+         CoroutineScope(Dispatchers.Main).launch {
+             PixBus.on(this) {
+                 val list = model.selectionList.value ?: HashSet()
+                 when {
+                     list.size > 0 -> {
+                         for (img in list) {
+                             //  options.preSelectedUrls = ArrayList()
+                             instantImageAdapter.select(false, img.position)
+                             mainImageAdapter.select(false, img.position)
+                         }
+                         model.selectionList.postValue(HashSet())
+                     }
+                     mBottomSheetBehavior?.state == BottomSheetBehavior.STATE_EXPANDED -> {
+                         mBottomSheetBehavior?.setState(BottomSheetBehavior.STATE_COLLAPSED)
+                     }
+                     else -> {
+                         model.returnObjects()
+                     }
+                 }
+             }
+         }
+     }*/
 
     private fun setupControls() {
         binding.setupClickControls(model, cameraXManager, options) { int, uri ->
@@ -340,34 +356,52 @@ class PixFragment(private val resultCallback: ((PixEventCallback.Results) -> Uni
             addOnSelectionListener(onSelectionListener)
             setHasStableIds(true)
         }
-
         binding.gridLayout.apply {
-            instantRecyclerView.adapter = instantImageAdapter
-            instantRecyclerView.addOnItemTouchListener(CustomItemTouchListener(binding))
-            recyclerView.setupMainRecyclerView(
-                context, mainImageAdapter, scrollListener(this@PixFragment, binding)
-            )
-        }
-    }
-
-
-    private fun setBottomSheetBehavior() {
-        mBottomSheetBehavior = BottomSheetBehavior.from(binding.gridLayout.bottomSheet)
-        requireActivity().setup(binding, mBottomSheetBehavior) {
-            if (it) {
-                showScrollbar(binding.gridLayout.fastscrollScrollbar, requireContext())
-                mainImageAdapter.notifyDataSetChanged()
-                mViewHeight = binding.gridLayout.fastscrollScrollbar.measuredHeight.toFloat()
-                handler.post { binding.setViewPositions(getScrollProportion(binding.gridLayout.recyclerView)) }
-                binding.gridLayout.sendButtonStateAnimation(show = false, withAnim = false)
+            if (options.showDefaultControls) {
+                instantRecyclerView.adapter = instantImageAdapter
+                instantRecyclerView.addOnItemTouchListener(CustomItemTouchListener(binding))
+                recyclerView.setupMainRecyclerView(
+                    context, mainImageAdapter, scrollListener(this@PixFragment, binding)
+                )
             } else {
-                instantImageAdapter.notifyDataSetChanged()
-                binding.gridLayout.fastscrollScrollbar.hide()
-                binding.gridLayout.sendButtonStateAnimation(model.longSelectionValue)
+                binding.gridLayout.rvImages.setupMainRecyclerView(
+                    context, mainImageAdapter, scrollListener(this@PixFragment, binding)
+                )
             }
         }
     }
 
+    private fun setBottomSheetBehavior() {
+        if (options.showDefaultControls) {
+            mBottomSheetBehavior = BottomSheetBehavior.from(binding.gridLayout.bottomSheet)
+            requireActivity().setup(binding, mBottomSheetBehavior) {
+                if (it) {
+                    showScrollbar(binding.gridLayout.fastscrollScrollbar, requireContext())
+                    mainImageAdapter.notifyDataSetChanged()
+                    mViewHeight = binding.gridLayout.fastscrollScrollbar.measuredHeight.toFloat()
+                    handler.post { binding.setViewPositions(getScrollProportion(binding.gridLayout.recyclerView)) }
+                    binding.gridLayout.sendButtonStateAnimation(show = false, withAnim = false)
+                } else {
+                    instantImageAdapter.notifyDataSetChanged()
+                    binding.gridLayout.fastscrollScrollbar.hide()
+                    binding.gridLayout.sendButtonStateAnimation(model.longSelectionValue)
+                }
+            }
+        } else {
+
+            /**
+             * Setting peekHeight to 0 alone does not fulfil the required behavior.
+             * BottomSheetBehavior state is set to Hidden to make it invisible.
+             * */
+
+            mBottomSheetBehavior = BottomSheetBehavior.from(binding.gridLayout.clGallery)
+            mBottomSheetBehavior?.isHideable = true
+            mBottomSheetBehavior?.peekHeight = 0
+            binding.gridLayout.clGallery.visibility = View.VISIBLE
+            mBottomSheetBehavior?.state = BottomSheetBehavior.STATE_HIDDEN
+        }
+
+    }
 
     private fun CameraXManager.startCamera() {
         setUpCamera(binding)
@@ -425,4 +459,72 @@ class PixFragment(private val resultCallback: ((PixEventCallback.Results) -> Uni
         }
         return false
     }
+
+    private fun setupCameraView() {
+        binding.gridLayout.controlsLayout.controlsLayout.visibility =
+            if (options.showDefaultControls) {
+                View.VISIBLE
+            } else {
+                View.GONE
+            }
+
+        if (options.showDefaultControls) {
+            binding.gridLayout.bottomSheet.visibility = View.VISIBLE
+            binding.gridLayout.clGallery.visibility = View.GONE
+        } else {
+            binding.gridLayout.bottomSheet.visibility = View.GONE
+        }
+    }
+
+    override fun showGallery() {
+        binding.gridLayout.ivCloseGallery.setOnClickListener {
+            hideGallery()
+        }
+        mBottomSheetBehavior?.state = BottomSheetBehavior.STATE_EXPANDED
+        mainImageAdapter.notifyDataSetChanged()
+    }
+
+    override fun hideGallery() {
+        mBottomSheetBehavior?.state = BottomSheetBehavior.STATE_COLLAPSED
+
+    }
+
+    override fun clickPicture() {
+        cameraXManager?.takePhoto { uri, exc ->
+            if (exc == null) {
+                model.selectionList.value?.add(Img(contentUrl = uri))
+                model.returnObjects()
+                val newUri = Uri.parse(uri.toString())
+                Log.i("Camera_uri", "$newUri")
+            } else {
+                model.returnObjects()
+                Log.i("Camera_exception", "$exc")
+            }
+        }
+    }
+
+    override fun switchFlashMode(): Int {
+        val flashMode = when (options.flash) {
+            Flash.Auto -> {
+                Log.i("Switching_flash", "Switching to off")
+                options.flash = Flash.Off
+                ImageCapture.FLASH_MODE_OFF
+            }
+            Flash.Off -> {
+                Log.i("Switching_flash", "Switching to On")
+                options.flash = Flash.On
+                ImageCapture.FLASH_MODE_ON
+            }
+            else -> {
+                // for on also
+                Log.i("Switching_flash", "Switching to auto")
+                options.flash = Flash.Auto
+                ImageCapture.FLASH_MODE_AUTO
+            }
+        }
+        cameraXManager?.imageCapture?.flashMode = flashMode
+        return flashMode
+    }
+
 }
+

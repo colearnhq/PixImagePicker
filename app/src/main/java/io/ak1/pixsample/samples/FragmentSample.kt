@@ -38,14 +38,17 @@ class FragmentSample : AppCompatActivity() {
         addPixToActivity(R.id.container, options) {
             when (it.status) {
                 PixEventCallback.Status.SUCCESS -> {
+                    Log.d("PixEventCallback", "Success : ${it}")
+
                     showResultsFragment()
                     it.data.forEach {
                         Log.e(TAG, "showCameraFragment: ${it.path}")
                     }
                     resultsFragment.setList(it.data)
                 }
-                PixEventCallback.Status.BACK_PRESSED -> {
-                    supportFragmentManager.popBackStack()
+
+                PixEventCallback.Status.ERROR -> {
+                    Log.e("PixEventCallback", "Error : ${it}")
                 }
             }
 
@@ -56,14 +59,6 @@ class FragmentSample : AppCompatActivity() {
         showStatusBar()
         supportFragmentManager.beginTransaction()
             .replace(R.id.container, resultsFragment).commit()
-    }
-
-    override fun onBackPressed() {
-        val f = supportFragmentManager.findFragmentById(R.id.container)
-        if (f is ResultsFragment)
-            super.onBackPressed()
-        else
-            PixBus.onBackPressedEvent()
     }
 
 }

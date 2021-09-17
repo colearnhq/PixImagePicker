@@ -1,6 +1,7 @@
 package io.ak1.pix.helpers
 
 import android.view.View
+import android.widget.Gallery
 import androidx.core.view.isGone
 import androidx.core.view.isInvisible
 import androidx.core.view.isVisible
@@ -16,6 +17,7 @@ import io.ak1.pix.databinding.FragmentPixBinding
 internal fun FragmentActivity.setup(
     binding: FragmentPixBinding,
     bottomSheetBehavior: BottomSheetBehavior<View>?,
+    showDefaultGallery : Boolean = true,
     callback: (Boolean) -> Unit
 ) {
 
@@ -36,13 +38,16 @@ internal fun FragmentActivity.setup(
             }
 
             override fun onSlide(bottomSheet: View, slideOffset: Float) {
-                manipulateVisibility(this@setup, binding, slideOffset)
-                if (slideOffset == 1f) {
-                    binding.gridLayout.sendButtonStateAnimation(show = false, withAnim = false)
-                    callback(true)
-                } else if (slideOffset == 0f) {
-                    callback(false)
+                if (showDefaultGallery) {
+                    manipulateVisibility(this@setup, binding, slideOffset)
+                    if (slideOffset == 1f) {
+                        binding.gridLayout.sendButtonStateAnimation(show = false, withAnim = false)
+                        callback(true)
+                    } else if (slideOffset == 0f) {
+                        callback(false)
+                    }
                 }
+
             }
         })
     }

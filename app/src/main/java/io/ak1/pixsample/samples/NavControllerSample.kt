@@ -10,9 +10,8 @@ import androidx.fragment.app.Fragment
 import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.fragment.findNavController
-import androidx.navigation.get
 import io.ak1.pix.helpers.PixBus
-import io.ak1.pix.helpers.PixEventCallback.Status.BACK_PRESSED
+import io.ak1.pix.helpers.PixEventCallback
 import io.ak1.pix.helpers.PixEventCallback.Status.SUCCESS
 import io.ak1.pix.helpers.setupScreen
 import io.ak1.pix.helpers.showStatusBar
@@ -51,13 +50,6 @@ class NavControllerSample : AppCompatActivity() {
         }
     }
 
-    override fun onBackPressed() {
-        if (navController.currentDestination == navController.graph[R.id.CameraFragment]) {
-            PixBus.onBackPressedEvent()
-        } else {
-            super.onBackPressed()
-        }
-    }
 }
 
 class NavResultsFragment : Fragment() {
@@ -73,8 +65,8 @@ class NavResultsFragment : Fragment() {
                         notifyDataSetChanged()
                     }
                 }
-                BACK_PRESSED -> {
-                    requireActivity().onBackPressed()
+                PixEventCallback.Status.ERROR -> {
+
                 }
             }
         }
