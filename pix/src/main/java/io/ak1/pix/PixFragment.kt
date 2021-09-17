@@ -168,17 +168,6 @@ class PixFragment(private val resultCallback: ((PixEventCallback.Results) -> Uni
         setupControls()
         backPressController()
         setupCameraView()
-        lifecycleScope.launch {
-            delay(1000)
-            switchFlashMode()
-            delay(1000)
-            switchFlashMode()
-            delay(1000)
-            switchFlashMode()
-            delay(1000)
-            switchFlashMode()
-        }
-
     }
 
     override fun onDestroyView() {
@@ -222,7 +211,17 @@ class PixFragment(private val resultCallback: ((PixEventCallback.Results) -> Uni
                 model.selectionList.postValue(HashSet())
                 options.preSelectedUrls.clear()
                 val results = set.map { it.contentUrl }
-                resultCallback?.invoke(PixEventCallback.Results(results))
+                if (results.isEmpty()) {
+                    resultCallback?.invoke(
+                        PixEventCallback.Results(
+                            results,
+                            PixEventCallback.Status.ERROR
+                        )
+                    )
+                } else {
+                    resultCallback?.invoke(PixEventCallback.Results(results))
+                }
+
                 PixBus.returnObjects(
                     event = PixEventCallback.Results(
                         results,
@@ -388,6 +387,10 @@ class PixFragment(private val resultCallback: ((PixEventCallback.Results) -> Uni
             }
         } else {
             mBottomSheetBehavior = BottomSheetBehavior.from(binding.gridLayout.clGallery)
+            mBottomSheetBehavior?.isHideable = true
+            mBottomSheetBehavior?.peekHeight = 0
+            binding.gridLayout.clGallery.visibility = View.VISIBLE
+            mBottomSheetBehavior?.state = BottomSheetBehavior.STATE_HIDDEN
         }
 
     }
@@ -466,7 +469,6 @@ class PixFragment(private val resultCallback: ((PixEventCallback.Results) -> Uni
     }
 
     override fun showGallery() {
-        binding.gridLayout.clGallery.visibility = View.VISIBLE
         binding.gridLayout.ivCloseGallery.setOnClickListener {
             hideGallery()
         }
@@ -488,6 +490,7 @@ class PixFragment(private val resultCallback: ((PixEventCallback.Results) -> Uni
                 val newUri = Uri.parse(uri.toString())
                 Log.i("Camera_uri", "$newUri")
             } else {
+                model.returnObjects()
                 Log.i("Camera_exception", "$exc")
             }
         }

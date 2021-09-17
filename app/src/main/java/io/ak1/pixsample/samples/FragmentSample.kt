@@ -38,12 +38,19 @@ class FragmentSample : AppCompatActivity() {
         addPixToActivity(R.id.container, options) {
             when (it.status) {
                 PixEventCallback.Status.SUCCESS -> {
+                    Log.d("PixEventCallback", "Success : ${it}")
+
                     showResultsFragment()
                     it.data.forEach {
                         Log.e(TAG, "showCameraFragment: ${it.path}")
                     }
                     resultsFragment.setList(it.data)
                 }
+
+                PixEventCallback.Status.ERROR -> {
+                    Log.e("PixEventCallback", "Error : ${it}")
+                }
+
                 PixEventCallback.Status.BACK_PRESSED -> {
                     supportFragmentManager.popBackStack()
                 }
