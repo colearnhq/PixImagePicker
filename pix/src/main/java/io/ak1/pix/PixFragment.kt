@@ -225,7 +225,11 @@ class PixFragment(private val resultCallback: ((PixEventCallback.Results) -> Uni
                 PixBus.returnObjects(
                     event = PixEventCallback.Results(
                         results,
-                        PixEventCallback.Status.SUCCESS
+                        if (results.isEmpty()) {
+                            PixEventCallback.Status.ERROR
+                        } else {
+                            PixEventCallback.Status.SUCCESS
+                        }
                     )
                 )
             }
@@ -386,6 +390,12 @@ class PixFragment(private val resultCallback: ((PixEventCallback.Results) -> Uni
                 }
             }
         } else {
+
+            /**
+             * Setting peekHeight to 0 alone does not fulfil the required behavior.
+             * BottomSheetBehavior state is set to Hidden to make it invisible.
+             * */
+
             mBottomSheetBehavior = BottomSheetBehavior.from(binding.gridLayout.clGallery)
             mBottomSheetBehavior?.isHideable = true
             mBottomSheetBehavior?.peekHeight = 0
@@ -479,7 +489,7 @@ class PixFragment(private val resultCallback: ((PixEventCallback.Results) -> Uni
 
     override fun hideGallery() {
         mBottomSheetBehavior?.state = BottomSheetBehavior.STATE_COLLAPSED
-        binding.gridLayout.clGallery.visibility = View.GONE
+
     }
 
     override fun clickPicture() {
