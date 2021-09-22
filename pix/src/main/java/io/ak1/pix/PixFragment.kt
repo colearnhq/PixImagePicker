@@ -94,9 +94,6 @@ class PixFragment(private val resultCallback: ((PixEventCallback.Results) -> Uni
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         options = arguments?.getParcelable(ARG_PARAM_PIX) ?: Options()
-
-        //Defining controls
-
         requireActivity().let {
             it.setupScreen()
             it.actionBar?.hide()
@@ -485,7 +482,6 @@ class PixFragment(private val resultCallback: ((PixEventCallback.Results) -> Uni
         }
         mBottomSheetBehavior?.state = BottomSheetBehavior.STATE_EXPANDED
         mainImageAdapter.notifyDataSetChanged()
-        // swipe animation is pending
     }
 
     override fun hideGallery() {
