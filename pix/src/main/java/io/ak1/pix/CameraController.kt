@@ -5,4 +5,5 @@ interface CameraController {
     fun hideGallery()
     fun clickPicture()
     fun switchFlashMode(): Int
+    fun getGalleryBottomSheetState() : Int?
 }

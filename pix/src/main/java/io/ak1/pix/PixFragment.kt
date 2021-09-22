@@ -489,8 +489,11 @@ class PixFragment(private val resultCallback: ((PixEventCallback.Results) -> Uni
     }
 
     override fun hideGallery() {
-        mBottomSheetBehavior?.state = BottomSheetBehavior.STATE_COLLAPSED
-
+        if (options.showDefaultControls) {
+            mBottomSheetBehavior?.state = BottomSheetBehavior.STATE_COLLAPSED
+        } else {
+            mBottomSheetBehavior?.state = BottomSheetBehavior.STATE_HIDDEN
+        }
     }
 
     override fun clickPicture() {
@@ -528,6 +531,10 @@ class PixFragment(private val resultCallback: ((PixEventCallback.Results) -> Uni
         }
         cameraXManager?.imageCapture?.flashMode = flashMode
         return flashMode
+    }
+
+    override fun getGalleryBottomSheetState(): Int? {
+        return mBottomSheetBehavior?.state
     }
 
 }

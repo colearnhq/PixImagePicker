@@ -167,6 +167,7 @@
                 android:layout_height="match_parent"
                 android:background="@color/color_white"
                 android:visibility="gone"
+                app:behavior_peekHeight = "0dp"
                 app:layout_behavior="com.google.android.material.bottomsheet.BottomSheetBehavior">
 
                 <com.google.android.material.appbar.AppBarLayout
