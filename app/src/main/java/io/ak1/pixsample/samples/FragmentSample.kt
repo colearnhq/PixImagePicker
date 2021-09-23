@@ -50,6 +50,12 @@ class FragmentSample : AppCompatActivity() {
                 PixEventCallback.Status.ERROR -> {
                     Log.e("PixEventCallback", "Error : ${it}")
                 }
+                PixEventCallback.Status.GALLERY_OPENED -> {
+                    Log.i("Gallery-status is open"," opened")
+                }
+                PixEventCallback.Status.GALLERY_CLOSED -> {
+                    Log.i("Gallery-status is close"," closed")
+                }
             }
 
         }

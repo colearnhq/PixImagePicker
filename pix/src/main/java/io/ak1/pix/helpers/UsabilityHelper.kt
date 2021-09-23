@@ -26,7 +26,7 @@ import kotlinx.coroutines.launch
 open class PixEventCallback {
 
     enum class Status {
-        SUCCESS, ERROR
+        SUCCESS, ERROR, GALLERY_OPENED, GALLERY_CLOSED
     }
 
     data class Results(

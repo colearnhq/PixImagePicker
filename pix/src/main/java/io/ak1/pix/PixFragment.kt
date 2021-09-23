@@ -35,6 +35,8 @@ import io.ak1.pix.utility.ARG_PARAM_PIX_KEY
 import io.ak1.pix.utility.CustomItemTouchListener
 import kotlinx.coroutines.*
 import java.lang.Runnable
+import java.util.*
+import kotlin.collections.HashSet
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
@@ -399,6 +401,27 @@ class PixFragment(private val resultCallback: ((PixEventCallback.Results) -> Uni
             mBottomSheetBehavior?.peekHeight = 0
             binding.gridLayout.clGallery.visibility = View.VISIBLE
             mBottomSheetBehavior?.state = BottomSheetBehavior.STATE_HIDDEN
+
+            mBottomSheetBehavior?.addBottomSheetCallback(object :BottomSheetBehavior.BottomSheetCallback(){
+                override fun onStateChanged(bottomSheet: View, newState: Int) {
+                }
+
+                override fun onSlide(bottomSheet: View, slideOffset: Float) {
+                    if (slideOffset == 0f) {
+                        resultCallback?.invoke(
+                            PixEventCallback.Results(
+                                Collections.emptyList(),
+                                PixEventCallback.Status.GALLERY_CLOSED
+                            )
+                        )
+                        Log.i("Gallery - closed ", " off set is 0")
+
+                    } else if (slideOffset == 1f) {
+                        Log.i("Gallery - open ", " off set is 1")
+                    }
+                }
+
+            })
         }
 
     }
@@ -477,6 +500,12 @@ class PixFragment(private val resultCallback: ((PixEventCallback.Results) -> Uni
     }
 
     override fun showGallery() {
+        resultCallback?.invoke(
+            PixEventCallback.Results(
+                Collections.emptyList(),
+                PixEventCallback.Status.GALLERY_OPENED
+            )
+        )
         binding.gridLayout.ivCloseGallery.setOnClickListener {
             hideGallery()
         }
