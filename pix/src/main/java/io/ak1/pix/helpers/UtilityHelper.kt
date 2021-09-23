@@ -80,13 +80,13 @@ fun FragmentActivity.setUpMargins(binding: FragmentPixBinding) {
     binding.gridLayout.mainContent.updateLayoutParams<ViewGroup.MarginLayoutParams> {
         updateMargins(
             0,
-            this@setUpMargins.statusBarHeight,
             0,
-            height
+            0,
+            0
         )
     }
     binding.gridLayout.controlsLayout.controlsLayout.updateLayoutParams<ViewGroup.MarginLayoutParams> {
-        updateMargins(0, 0, 0, height)
+        updateMargins(0, 0, 0, 0)
     }
     binding.gridLayout.sendButton.apply {
         updateLayoutParams<ViewGroup.MarginLayoutParams> {

@@ -401,12 +401,17 @@ class PixFragment(private val resultCallback: ((PixEventCallback.Results) -> Uni
             binding.gridLayout.clGallery.visibility = View.VISIBLE
             mBottomSheetBehavior?.state = BottomSheetBehavior.STATE_HIDDEN
 
-            mBottomSheetBehavior?.addBottomSheetCallback(object :BottomSheetBehavior.BottomSheetCallback(){
+            mBottomSheetBehavior?.addBottomSheetCallback(object :
+                BottomSheetBehavior.BottomSheetCallback() {
                 override fun onStateChanged(bottomSheet: View, newState: Int) {
                 }
 
                 override fun onSlide(bottomSheet: View, slideOffset: Float) {
+                    if (slideOffset > 0) {
+                        activity?.showStatusBar()
+                    }
                     if (slideOffset == 0f) {
+                        activity?.hideStatusBar()
                         resultCallback?.invoke(
                             PixEventCallback.Results(
                                 Collections.emptyList(),
